@@ -3,6 +3,17 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class MeetingRoomCreate(BaseModel):
-    name: str = Field(None, min_length=1, max_length=100)
+class MeetingRoomBase(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str]
+
+
+class MeetingRoomCreate(MeetingRoomBase):
+    name: str = Field(None, min_length=1, max_length=100)
+
+
+class MeetingRoomDB(MeetingRoomBase):
+    id: int
+
+    class Config:
+        orm_mode = True
