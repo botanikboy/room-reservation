@@ -16,11 +16,11 @@ class ReservationUpdate(ReservationBase):
             raise ValueError('reservation start must be in future')
         return value
 
-    @model_validator(skip_on_failure=True)
-    def check_from_reserve_before_to_reserve(cls, values):
-        if values['from_reserve'] >= values['to_reserve']:
+    @model_validator(mode='after')
+    def check_from_reserve_before_to_reserve(self):
+        if self.from_reserve >= self.to_reserve:
             raise ValueError('reservation end must be after start')
-        return values
+        return self
 
 
 class ReservationCreate(ReservationUpdate):
