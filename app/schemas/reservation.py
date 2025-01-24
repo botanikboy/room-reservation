@@ -41,13 +41,6 @@ class ReservationDB(ReservationBase):
 
     class Config:
         orm_mode = True
-
-    @staticmethod
-    def _format_datetime(value: datetime) -> datetime:
-        if isinstance(value, datetime):
-            return value.isoformat(sep=' ', timespec='minutes')
-        return value
-
-    @field_validator('from_reserve', 'to_reserve')
-    def format_datetime(cls, value):
-        return cls._format_datetime(value)
+        json_encoders = {
+            datetime: lambda v: v.isoformat(sep=' ', timespec='minutes')
+        }
