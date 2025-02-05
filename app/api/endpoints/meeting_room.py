@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.validators import check_meeting_room_exists, check_name_duplicate
 from app.core.db import get_async_session
 from app.core.user import current_superuser
+from app.core.templates import templates
 from app.crud.meeting_room import meeting_room_crud
 from app.crud.reservation import reservation_crud
 from app.schemas.meeting_room import (MeetingRoomCreate, MeetingRoomDB,
@@ -100,3 +102,9 @@ async def get_reservations_for_room(
     reservations = await reservation_crud.get_future_reservations_for_room(
         room_id, session)
     return reservations
+
+
+@router.get('/meeting_rooms_page', response_class=HTMLResponse)
+async def render_meeting_rooms_page(request: Request):
+    return templates.TemplateResponse(
+        "meeting_rooms.html", {"request": request})

@@ -1,42 +1,5 @@
+import asyncio
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
-
-HTML_PAGE = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <h2>Your ID: <span id="ws-id"></span></h2>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var client_id = Date.now()
-            document.querySelector("#ws-id").textContent = client_id;
-            var ws = new WebSocket(`ws://localhost:8000/websocket/ws/${client_id}`);
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
-</html>
-'''
 
 router = APIRouter()
 
@@ -63,20 +26,13 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.get('/page')
-async def websocket_page():
-    return HTMLResponse(HTML_PAGE)
-
-
-@router.websocket('/ws/{client_id}')
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+@router.websocket('/meeting_rooms')
+async def websocket_rooms(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.send_personal_message(
-                f"You wrote: {data}", websocket)
-            await manager.broadcast(f"Client #{client_id} says: {data}")
+            data = 'Room X is now occupied/free'
+            await manager.broadcast(data)
+            await asyncio.sleep(5)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.broadcast(f"Client #{client_id} left the chat")

@@ -11,4 +11,4 @@ main_router.include_router(
     room_router, prefix='/meeting_rooms', tags=['Meeting Rooms']
 )
 main_router.include_router(user_router)
-main_router.include_router(websocket_router, prefix='/websocket')
+main_router.include_router(websocket_router, prefix='/ws')
