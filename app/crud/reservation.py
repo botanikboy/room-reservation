@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,6 +53,21 @@ class CRUDReservation(CRUDBase):
             select(Reservation).where(Reservation.user_id == user_id)
         )
         return reservations.scalars().all()
+
+    async def get_today_reservations(
+            self,
+            session: AsyncSession
+    ) -> list[Reservation]:
+        today = datetime.now().date()
+        start_of_day = datetime.combine(today, time(6, 0, 0))
+        end_of_day = datetime.combine(today, time(23, 59, 59))
+
+        query = select(Reservation).where(
+            Reservation.from_reserve >= start_of_day,
+            Reservation.from_reserve <= end_of_day
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
 
 
 reservation_crud = CRUDReservation(Reservation)

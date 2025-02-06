@@ -1,39 +1,92 @@
-// static/js/app.js
+let ganttChart; // Глобальная переменная для диаграммы
+let reservations = []; // Глобальная переменная для хранения бронирований
 
-// Подключение к WebSocket-серверу
-const ws = new WebSocket("ws://localhost:8000/ws/meeting_rooms");
+document.addEventListener("DOMContentLoaded", () => {
+    reservations = [{"from_reserve": "2025-02-06T16:31:00", "id": 6, "room_id": 1, "to_reserve": "2025-02-06T17:21:00"}];
+    renderGanttChart(reservations);
 
-// Ссылка на элемент списка
-const roomsList = document.getElementById("rooms-list");
+    // Подключение WebSocket
+    const ws = new WebSocket("ws://localhost:8000/ws/meeting_rooms");
 
-// При подключении WebSocket
-ws.onopen = () => {
-    console.log("WebSocket connected");
-};
+    ws.onmessage = (event) => {
+        try {
+            const newReservation = JSON.parse(event.data);
+            if (newReservation.from_reserve && newReservation.to_reserve && newReservation.room_name) {
+                reservations.push(newReservation); // Добавляем новое бронирование в глобальный список
+                updateGanttChart(newReservation);
+            } else {
+                console.error("Invalid reservation data:", event.data);
+            }
+        } catch (e) {
+            console.error("Error parsing WebSocket message:", e);
+        }
+    };
+});
 
-// При получении сообщений
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data); // Парсим JSON
-    console.log("Received:", data);
-    updateRoomStatus(data); // Обновляем интерфейс
-};
+function renderGanttChart(reservations) {
+    const ctx = document.getElementById("ganttChart").getContext("2d");
 
-// Обновление списка переговорных
-function updateRoomStatus(room) {
-    // Ищем элемент списка для текущей комнаты
-    let roomElement = document.getElementById(`room-${room.room_id}`);
-
-    if (!roomElement) {
-        // Если комната не существует, создаём новый элемент
-        roomElement = document.createElement("li");
-        roomElement.id = `room-${room.room_id}`;
-        roomElement.classList.add("list-group-item", "d-flex", "justify-content-between");
-        roomsList.appendChild(roomElement);
+    // Уничтожаем предыдущую диаграмму, если она существует
+    if (ganttChart) {
+        ganttChart.destroy();
     }
 
-    // Обновляем текст и статус комнаты
-    roomElement.textContent = `${room.room_name}`;
-    roomElement.classList.remove("list-group-item-success", "list-group-item-danger");
-    roomElement.classList.add(room.status === "occupied" ? "list-group-item-danger" : "list-group-item-success");
-    roomElement.textContent += room.status === "occupied" ? " (Occupied)" : " (Free)";
+    const datasets = reservations.map(res => ({
+        label: res.room_name,
+        data: [{
+            x: [new Date(res.from_reserve), new Date(res.to_reserve)],
+            y: res.room_name
+        }],
+        backgroundColor: "rgba(75, 192, 192, 0.5)",
+        borderColor: "rgba(75, 192, 192, 1)",
+        borderWidth: 1
+    }));
+
+    ganttChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: reservations.map(res => res.room_name),
+            datasets: datasets
+        },
+        options: {
+            indexAxis: "y",
+            scales: {
+                x: {
+                    type: "time",
+                    time: {
+                        unit: "hour",
+                        tooltipFormat: "HH:mm",
+                        displayFormats: { hour: "HH:mm" }
+                    },
+                    min: new Date().setHours(6, 0, 0, 0),
+                    max: new Date().setHours(23, 59, 59, 999)
+                }
+            }
+        }
+    });
+}
+
+
+function updateGanttChart(newReservation) {
+    const existingIndex = ganttChart.data.datasets.findIndex(d => d.label === newReservation.room_name);
+
+    if (existingIndex !== -1) {
+        ganttChart.data.datasets[existingIndex].data = [{
+            x: [new Date(newReservation.from_reserve), new Date(newReservation.to_reserve)],
+            y: newReservation.room_name
+        }];
+    } else {
+        ganttChart.data.datasets.push({
+            label: newReservation.room_name,
+            data: [{
+                x: [new Date(newReservation.from_reserve), new Date(newReservation.to_reserve)],
+                y: newReservation.room_name
+            }],
+            backgroundColor: "rgba(75, 192, 192, 0.5)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1
+        });
+    }
+
+    ganttChart.update();
 }

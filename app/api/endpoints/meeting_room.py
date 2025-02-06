@@ -104,7 +104,30 @@ async def get_reservations_for_room(
     return reservations
 
 
-@router.get('/meeting_rooms_page', response_class=HTMLResponse)
-async def render_meeting_rooms_page(request: Request):
+@router.get(
+    '/meeting_rooms_page',
+    response_class=HTMLResponse,
+)
+async def render_meeting_rooms_page(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session)
+):
+    rooms = await meeting_room_crud.get_multi(session)
+    reservations = await reservation_crud.get_today_reservations(session)
+    reservations_data = [
+        {
+            "id": res.id,
+            "room_id": res.room_id,
+            "from_reserve": res.from_reserve.isoformat(),
+            "to_reserve": res.to_reserve.isoformat()
+        }
+        for res in reservations
+    ]
     return templates.TemplateResponse(
-        "meeting_rooms.html", {"request": request})
+        'meeting_rooms.html',
+        {
+            'request': request,
+            'rooms': rooms,
+            'reservations': reservations_data,
+        }
+    )

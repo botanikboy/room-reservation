@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meeting Rooms</title>
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
     <div class="container my-4">
@@ -13,15 +15,73 @@
             <div class="col-md-4">
                 <h3>Rooms List</h3>
                 <ul id="rooms-list" class="list-group">
+                    {% for room in rooms %}
+                        <li id="room-{{ room.id }}" class="list-group-item d-flex justify-content-between list-group-item-secondary">
+                            <span>{{ room.name }}</span>
+                            <span id="status-{{ room.id }}">Unknown</span>
+                        </li>
+                    {% endfor %}
                 </ul>
             </div>
             <div class="col-md-8">
                 <h3>Schedule</h3>
                 <div id="schedule" class="border p-4">
+                    <canvas id="ganttChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const reservations = {{ reservations|tojson|safe }};
+            renderGanttChart(reservations);
+        });
+
+        function renderGanttChart(reservations) {
+            const ctx = document.getElementById("ganttChart").getContext("2d");
+            
+            const startOfDay = new Date();
+            startOfDay.setHours(6, 0, 0, 0);
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
+            
+            const datasets = reservations.map(res => {
+                return {
+                    label: res.room_name,
+                    data: [{
+                        x: [new Date(res.from_reserve), new Date(res.to_reserve)],
+                        y: res.room_name
+                    }],
+                    backgroundColor: "rgba(75, 192, 192, 0.5)",
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    borderWidth: 1
+                };
+            });
+            
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: reservations.map(res => res.room_name),
+                    datasets: datasets
+                },
+                options: {
+                    indexAxis: "y",
+                    scales: {
+                        x: {
+                            type: "time",
+                            min: startOfDay,
+                            max: endOfDay,
+                            time: {
+                                unit: "hour",
+                                tooltipFormat: "HH:mm",
+                                displayFormats: { hour: "HH:mm" }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

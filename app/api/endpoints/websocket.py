@@ -1,7 +1,12 @@
 import json
 import random
 import asyncio
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect
+
+from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.crud.meeting_room import meeting_room_crud
+from app.core.db import get_async_session
 
 router = APIRouter()
 
@@ -36,17 +41,21 @@ manager = ConnectionManager()
 
 
 @router.websocket('/meeting_rooms')
-async def websocket_rooms(websocket: WebSocket):
+async def websocket_rooms(
+    websocket: WebSocket,
+    session: AsyncSession = Depends(get_async_session)
+):
     await manager.connect(websocket)
     try:
-        while True:
-            room_status = random.choice(["occupied", "free"])
-            data = {
-                "room_id": 1,
-                "room_name": "Room A",
-                "status": room_status
-            }
-            await manager.broadcast(data)
-            await asyncio.sleep(2)
+        room_ids = await meeting_room_crud.get_multi(session)
+        # while True:
+        #     for room_id in room_ids:
+        #         room_status = random.choice(["occupied", "free"])
+        #         data = {
+        #             "room_id": room_id.id,
+        #             "status": room_status
+        #         }
+        #         await manager.broadcast(data)
+        #         await asyncio.sleep(2)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
