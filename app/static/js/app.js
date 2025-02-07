@@ -1,4 +1,10 @@
-let ganttChart; // Глобальная переменная для диаграммы
+let ganttChart;
+
+function getBaseDate() {
+    const today = new Date();
+    today.setHours(6, 0, 0, 0);
+    return today;
+} // Глобальная переменная для диаграммы
 let reservations = []; // Глобальная переменная для хранения бронирований
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -24,12 +30,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function renderGanttChart(reservations) {
-    const ctx = document.getElementById("ganttChart").getContext("2d");
-
-    // Уничтожаем предыдущую диаграмму, если она существует
     if (ganttChart) {
         ganttChart.destroy();
     }
+    const ctx = document.getElementById("ganttChart").getContext("2d");
+    
+    const baseDate = getBaseDate(reservations);
+    const minTime = new Date(baseDate);
+    minTime.setHours(6, 0, 0, 0);
+    const maxTime = new Date(baseDate);
+    maxTime.setHours(23, 59, 59, 999);
 
     const datasets = reservations.map(res => ({
         label: res.room_name,
@@ -58,14 +68,13 @@ function renderGanttChart(reservations) {
                         tooltipFormat: "HH:mm",
                         displayFormats: { hour: "HH:mm" }
                     },
-                    min: new Date().setHours(6, 0, 0, 0),
-                    max: new Date().setHours(23, 59, 59, 999)
+                    min: minTime,
+                    max: maxTime
                 }
             }
         }
     });
 }
-
 
 function updateGanttChart(newReservation) {
     const existingIndex = ganttChart.data.datasets.findIndex(d => d.label === newReservation.room_name);
