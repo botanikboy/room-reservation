@@ -10,6 +10,7 @@ from app.schemas.reservation import (ReservationCreate, ReservationDB,
 from app.api.validators import (check_meeting_room_exists,
                                 check_reservation_intersections,
                                 check_reservation_before_edit)
+from app.core.websocket_manager import manager as websocket_manager
 
 router = APIRouter()
 
@@ -31,6 +32,13 @@ async def create_reservation(
         session,
         user
     )
+    reservation_data = {
+        "id": new_reservation.id,
+        "room_id": new_reservation.room_id,
+        "from_reserve": new_reservation.from_reserve.isoformat(),
+        "to_reserve": new_reservation.to_reserve.isoformat()
+    }
+    await websocket_manager.broadcast(reservation_data)
     return new_reservation
 
 
