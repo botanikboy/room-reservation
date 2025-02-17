@@ -16,6 +16,29 @@ from app.core.websocket_manager import manager as websocket_manager
 router = APIRouter()
 
 
+async def send_reservation_update(
+    action: str, reservation: Reservation, session: AsyncSession
+):
+    """Отправка обновления по WebSocket."""
+    user_data = await session.execute(
+        select(User.email).where(User.id == reservation.user_id)
+    )
+    user_name = user_data.scalars().first()
+
+    reservation_data = {
+        "action": action,
+        "user_name": user_name or "Unknown",
+        "room_id": reservation.room_id,
+        "from_reserve": reservation.from_reserve.isoformat(
+            sep=" ", timespec="minutes"
+        ),
+        "to_reserve": reservation.to_reserve.isoformat(
+            sep=" ", timespec="minutes"
+        ),
+    }
+    await websocket_manager.broadcast(reservation_data)
+
+
 @router.post('/', response_model=ReservationDB)
 async def create_reservation(
     reservation: ReservationCreate,
@@ -29,25 +52,13 @@ async def create_reservation(
         session=session
     )
 
-    user_data = await session.execute(
-        select(User.email).where(User.id == user.id)
-    )
-    user_name = user_data.scalars().first()
-
     new_reservation: Reservation = await reservation_crud.create(
         reservation,
         session,
         user
     )
-    reservation_data = {
-        "user_name": user_name or "Unknown",
-        "room_id": new_reservation.room_id,
-        "from_reserve": new_reservation.from_reserve.isoformat(
-            sep=' ', timespec='minutes'),
-        "to_reserve": new_reservation.to_reserve.isoformat(
-            sep=' ', timespec='minutes')
-    }
-    await websocket_manager.broadcast(reservation_data)
+
+    await send_reservation_update("created", new_reservation, session)
     return new_reservation
 
 
@@ -76,6 +87,7 @@ async def delete_reservation(
     reservation = await reservation_crud.remove(
         reservation, session
     )
+    await send_reservation_update("deleted", reservation, session)
     return reservation
 
 
@@ -101,6 +113,7 @@ async def update_reservation(
         obj_in=obj_in,
         session=session,
     )
+    await send_reservation_update("updated", reservation, session)
     return reservation
 
 

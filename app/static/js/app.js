@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const logEntry = document.createElement("div");
         logEntry.innerHTML = `
             <a href="#" class="text-primary fw-bold">${data.user_name}</a> 
-            made new reservation: 
+            ${data.action} reservation: 
             <strong>Room ${data.room_id}</strong>, 
             From: ${data.from_reserve}, 
             To: ${data.to_reserve}
