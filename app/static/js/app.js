@@ -15,7 +15,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Логирование сообщения
         const logEntry = document.createElement("div");
-        logEntry.textContent = `New reservation: Room ${data.room_id}, From: ${data.from_reserve}, To: ${data.to_reserve}`;
+        logEntry.innerHTML = `
+            <a href="#" class="text-primary fw-bold">${data.user_name}</a> 
+            made new reservation: 
+            <strong>Room ${data.room_id}</strong>, 
+            From: ${data.from_reserve}, 
+            To: ${data.to_reserve}
+        `;
+
         logContainer.appendChild(logEntry);
         logContainer.scrollTop = logContainer.scrollHeight;
     };

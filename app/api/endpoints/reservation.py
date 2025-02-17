@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 from app.core.user import current_user, current_superuser
 from app.crud.reservation import reservation_crud
-from app.models import User
+from app.models import User, Reservation
 from app.schemas.reservation import (ReservationCreate, ReservationDB,
                                      ReservationUpdate)
 from app.api.validators import (check_meeting_room_exists,
@@ -27,16 +28,24 @@ async def create_reservation(
             include=['from_reserve', 'to_reserve', 'room_id']),
         session=session
     )
-    new_reservation = await reservation_crud.create(
+
+    user_data = await session.execute(
+        select(User.email).where(User.id == user.id)
+    )
+    user_name = user_data.scalars().first()
+
+    new_reservation: Reservation = await reservation_crud.create(
         reservation,
         session,
         user
     )
     reservation_data = {
-        "id": new_reservation.id,
+        "user_name": user_name or "Unknown",
         "room_id": new_reservation.room_id,
-        "from_reserve": new_reservation.from_reserve.isoformat(),
-        "to_reserve": new_reservation.to_reserve.isoformat()
+        "from_reserve": new_reservation.from_reserve.isoformat(
+            sep=' ', timespec='minutes'),
+        "to_reserve": new_reservation.to_reserve.isoformat(
+            sep=' ', timespec='minutes')
     }
     await websocket_manager.broadcast(reservation_data)
     return new_reservation
